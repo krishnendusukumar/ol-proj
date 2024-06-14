@@ -3,64 +3,88 @@ import 'ol/ol.css';
 import { Map, View } from 'ol';
 import TileLayer from 'ol/layer/Tile';
 import OSM from 'ol/source/OSM';
-import ImageLayer from 'ol/layer/Image';
-import ImageStatic from 'ol/source/ImageStatic';
 import { fromLonLat } from 'ol/proj';
-import { getCenter } from 'ol/extent';
 import VectorLayer from 'ol/layer/Vector';
 import VectorSource from 'ol/source/Vector';
-import Feature from 'ol/Feature';
-import Point from 'ol/geom/Point';
+import GeoJSON from 'ol/format/GeoJSON';
+import Stroke from 'ol/style/Stroke';
 import Style from 'ol/style/Style';
-import Icon from 'ol/style/Icon';
+import { Heatmap as HeatmapLayer } from 'ol/layer';
 
-// Define the extent of the image in map coordinates
-const imageExtent = fromLonLat([77.1025, 28.7041]);
-const imageCoordinate = fromLonLat([77.1025, 28.7041]);
-const iconFeature = new Feature({
-    geometry: new Point(imageCoordinate),
-  });
+// GeoJSON input
+const input = {
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {},
+      "geometry": {
+        "coordinates": [
+          [74.40206638280921, 22.37868130705212],
+          [74.76218793901796, 22.016734890589888],
+          [77.72280972804981, 18.14881898278645],
+          [82.7953089286139, 19.87914788034307],
+          [86.26559027981261, 23.661148994956008],
+          [82.55133426094892, 25.91358321899449],
+          [80.61833150030918, 27.342332051466784],
+          [74.22748644474726, 23.702998600936724],
+          [73.70565841704985, 26.312939244794094],
+          [70.08981366133054, 23.079563769983025],
+          [74.01538956086972, 21.795708640822426],
+          [74.45696626633168, 22.395271775126957]
+        ],
+        "type": "LineString"
+      }
+    }
+  ]
+};
 
-  const iconStyle = new Style({
-    image: new Icon({
-      anchor: [0.5, 1],
-      src: '/farmer.png',
-      scale: 0.1  // Adjust the scale as needed
-    })
-  });
+// Convert the input coordinates to the map's projection
+const features = new GeoJSON().readFeatures(input, {
+  featureProjection: 'EPSG:3857'
+});
 
-  iconFeature.setStyle(iconStyle);
+const vectorSource = new VectorSource({
+  features: features
+});
 
-  const vectorSource = new VectorSource({
-    features: [iconFeature],
-  });
+const vectorLayer = new VectorLayer({
+  source: vectorSource,
+  style: new Style({
+    stroke: new Stroke({
+      color: '#ff0000',
+      width: 5,
+    }),
+  }),
+});
 
-  const vectorLayer = new VectorLayer({
-    source: vectorSource,
-  });
+// Assuming 'police.geojson' is the URL to your GeoJSON data for the heatmap
+const heatmapSource = new VectorSource({
+  url: 'police.geojson',
+  format: new GeoJSON(),
+});
+
+const heatmapLayer = new HeatmapLayer({
+  source: heatmapSource,
+  gradient: ['#ff00ff', '#00ff00', '#ffffff', '#000000']
+});
+
 // Create a new map
 const map = new Map({
   target: 'map',
   layers: [
     new TileLayer({
-      source: new OSM()
+      source: new OSM({
+        wrapX: false
+      })
     }),
-    vectorLayer
-    // new ImageLayer({
-    //   source: new ImageStatic({
-    //     url: 'farmer.png',
-    //     imageExtent: [
-    //       imageExtent[0] - 5000, imageExtent[1] - 5000, // Bottom-left
-    //       imageExtent[0] + 5000, imageExtent[1] + 5000  // Top-right
-    //     ],
-    //   }),
-    // })
+    vectorLayer,
+    heatmapLayer
   ],
   view: new View({
-    center: imageExtent, // Center the view on the image location
+    center: fromLonLat([77.1025, 28.7041]), 
     zoom: 5
   })
 });
 
-// Log the view center to the console
 console.log(map.getView().getCenter());
